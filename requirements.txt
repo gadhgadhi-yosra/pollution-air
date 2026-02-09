@@ -1,0 +1,15 @@
+pandas
+numpy
+scikit-learn
+xgboost
+lightgbm
+mlflow
+fastapi
+uvicorn[standard]
+httpx
+beautifulsoup4
+lxml
+pydantic
+python-dotenv
+rich
+orjson
