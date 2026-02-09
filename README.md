@@ -46,3 +46,4 @@ Chaque modèle est loggué dans MLflow avec son `MODEL_URI` (affiché en sortie)
 - Calculer `hour_sin/hour_cos` à la volée dans l'API.
 - Créer le frontend React dans `src/frontend` et l'ajouter au docker-compose.
 - Mettre en place des jobs planifiés (cron/Prefect) pour collecter en continu.
+# projet-python
