@@ -16,7 +16,9 @@ Projet personnel inspiré de l'architecture (scraping → pipeline ML → FastAP
 
 ### Entraîner plusieurs modèles (RF, XGBoost, LightGBM)
 ```bash
-python -m src.models.train_multi
+python -m src.models.train_multi  # autodétecte les features (lags dispo, temps, météo si présentes)
+# ou sur le dataset externe :
+python -m src.models.train_multi --file data/features/features_air_quality.parquet
 ```
 Chaque modèle est loggué dans MLflow avec son `MODEL_URI` (affiché en sortie).
 
