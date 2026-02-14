@@ -34,12 +34,23 @@ Chaque modèle est loggué dans MLflow avec son `MODEL_URI` (affiché en sortie)
 ## Structure
 - `src/scraping/`: clients OpenAQ v3 & AirNow, script de collecte.
 - `src/features/`: nettoyage, features temporelles, lags.
+- `src/features/build_features_air_quality.py`: features pour `data/raw/air_quality_clean.csv` (PM2.5 + météo/gaz, lags 1/3/7 par ville).
 - `src/models/`: entraînement + tracking MLflow.
 - `src/api/`: FastAPI exposant `/predict`.
 - `docker/`: Dockerfile de l'API.
 - `docker-compose.yml`: lance l'API en conteneur (monte data/models).
 - `data/`: sous-dossiers raw/processed/features.
 - `notebooks/`: EDA rapide (`python -m notebooks.eda` génère quelques graphiques dans notebooks/).
+
+## Scénario dataset externe (air_quality_clean.csv)
+1. Copier le CSV dans `data/raw/` (déjà placé : `data/raw/air_quality_clean.csv`).
+2. Construire les features :  
+   `python -m src.features.build_features_air_quality`  
+   → écrit `data/features/features_air_quality.parquet`
+3. Entraîner plusieurs modèles dessus :  
+   `python -m src.models.train_multi --file data/features/features_air_quality.parquet`
+4. Tester EDA sur ce dataset :  
+   `python -m notebooks.eda --raw "data/raw/air_quality_clean.csv" --features data/features/features_air_quality.parquet`
 
 ## Prochaines étapes
 - Ajouter météo (Open-Meteo) aux features.

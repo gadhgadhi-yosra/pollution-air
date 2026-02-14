@@ -22,6 +22,20 @@ def load_first(pattern: str) -> pd.DataFrame:
     return pd.read_parquet(paths[0]) if paths[0].endswith(".parquet") else pd.read_csv(paths[0])
 
 
+def pick_target(df: pd.DataFrame) -> str:
+    """Pick a target column for basic hist plots."""
+    if "value" in df.columns:
+        return "value"
+    for alt in ["PM2.5", "PM10", "NO2", "SO2", "CO", "O3"]:
+        if alt in df.columns:
+            return alt
+    # fallback to first numeric
+    num_cols = df.select_dtypes(include=["number"]).columns
+    if len(num_cols):
+        return num_cols[0]
+    raise ValueError("No numeric column found to plot.")
+
+
 def main(raw_pattern: str, features_path: str):
     sns.set(style="whitegrid")
 
@@ -29,10 +43,12 @@ def main(raw_pattern: str, features_path: str):
     print(f"[RAW] shape={raw_df.shape}, cols={list(raw_df.columns)}")
     print(raw_df.describe(include="all"))
 
+    target = pick_target(raw_df)
+
     # plot distribution de la valeur
     plt.figure(figsize=(8, 4))
-    sns.histplot(raw_df["value"], bins=30, kde=True)
-    plt.title("Distribution valeur brute")
+    sns.histplot(raw_df[target], bins=30, kde=True)
+    plt.title(f"Distribution {target}")
     plt.tight_layout()
     plt.savefig("notebooks/eda_raw_value.png")
 
