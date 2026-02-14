@@ -45,7 +45,6 @@ def predict(req: PredictionRequest):
     model = load_model()
     hour = req.hour % 24
     hour_rad = 2 * math.pi * hour / 24
-    # base features from request
     base_row = {
         "hour": hour,
         "dayofweek": req.dayofweek % 7,
@@ -59,26 +58,20 @@ def predict(req: PredictionRequest):
 
     df = pd.DataFrame([base_row])
 
-    # Some trained models include extra features (météo/gaz, lags supplémentaires).
-    # To avoid 500 errors, we auto-augment the row with any required columns missing,
-    # filling with 0 by default. Then we reorder columns to match the model schema.
     try:
         input_schema = model.metadata.get_input_schema()
         expected_cols = [field.name for field in input_schema.inputs]
         for col in expected_cols:
             if col not in df.columns:
                 df[col] = 0.0
-        # reorder to expected order
         df = df[expected_cols]
     except Exception:
-        # if schema unavailable, proceed with current df
         pass
 
     try:
         pred = model.predict(df)[0]
         return PredictionResponse(prediction=float(pred))
     except Exception as e:
-        # Handle missing-column errors gracefully by auto-adding them then retrying once
         msg = str(e)
         if "columns are missing" in msg:
             try:
@@ -87,10 +80,8 @@ def predict(req: PredictionRequest):
                 for col in missing_cols:
                     if col and col not in df.columns:
                         df[col] = 0.0
-                # retry
                 pred = model.predict(df)[0]
                 return PredictionResponse(prediction=float(pred))
             except Exception:
                 pass
-        # surface error to client with 500
         raise HTTPException(status_code=500, detail=msg)
