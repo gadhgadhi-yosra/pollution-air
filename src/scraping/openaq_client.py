@@ -15,13 +15,11 @@ from typing import Dict, Any, List
 import httpx
 from dotenv import load_dotenv
 
-# Load .env if present so OPENAQ_API_KEY is picked up when running as module
 load_dotenv()
 
 OPENAQ_BASE_URL = os.getenv("OPENAQ_BASE_URL", "https://api.openaq.org/v3")
 DEFAULT_TIMEOUT = 10.0
 
-# mapping parameter slug -> parameter id in OpenAQ v3
 PARAMETER_IDS = {
     "pm25": 2,
     "pm10": 3,
