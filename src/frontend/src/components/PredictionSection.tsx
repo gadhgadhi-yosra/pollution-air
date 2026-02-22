@@ -38,18 +38,27 @@ const PredictionSection = () => {
     const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
     try {
-      // Payload aligné sur l'API actuelle : on mappe le formulaire sur les 3 lags attendus
       const now = new Date();
       const payload = {
+        pm25: formData.pm25,
+        pm10: formData.pm10,
+        no2: formData.no2,
+        o3: formData.o3,
+        co: formData.co,
+        so2: formData.so2,
+        temperature: formData.temperature,
+        humidity: formData.humidity,
+        wind_speed: formData.wind_speed,
+        traffic_density: formData.traffic_density,
+        green_spaces: formData.green_spaces,
+        industrial_zone: formData.industrial_zone,
+        ville: formData.ville,
         hour: now.getHours(),
         dayofweek: now.getDay(),
         month: now.getMonth() + 1,
-        value_lag_1: formData.pm25, // on utilise PM2.5
-        value_lag_3: formData.pm10, // on utilise PM10
-        value_lag_24: formData.no2, // on utilise NO2
       };
 
-      const res = await fetch(`${API_URL}/predict`, {
+      const res = await fetch(`${API_URL}/predict/full`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -74,30 +83,9 @@ const PredictionSection = () => {
         description: `Score: ${predValue.toFixed(2)} (niveau ${risk.label})`,
       });
     } catch (error) {
-      // Fallback simulation locale si l'API n'est pas disponible
-      let riskScore = 0;
-      riskScore += formData.pm25 * 0.08;
-      riskScore += formData.pm10 * 0.04;
-      riskScore += formData.no2 * 0.03;
-      riskScore += formData.co * 1.5;
-      riskScore += formData.so2 * 0.05;
-      riskScore += formData.traffic_density * 0.02;
-      if (formData.industrial_zone) riskScore += 0.8;
-      riskScore -= formData.green_spaces * 0.02;
-      riskScore -= formData.wind_speed * 0.05;
-
-      const riskLevel = clamp(Math.round(riskScore / 1.2), 0, 5);
-      const risk = riskLabels[riskLevel];
-
-      setPrediction({
-        level: riskLevel,
-        label: risk.label,
-        color: risk.color,
-      });
-
       toast({
-        title: "Mode démo (API indisponible)",
-        description: `Risque estimé: ${risk.label}`,
+        title: "Erreur",
+        description: "Impossible d'obtenir la prédiction (API). Vérifie que l'API tourne.",
         variant: "destructive",
       });
     } finally {
@@ -120,12 +108,7 @@ const PredictionSection = () => {
   return (
     <section id="prediction" className="py-20 px-4">
       <div className="container mx-auto max-w-5xl">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center mb-12"
-        >
+        <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6">
             <Rocket className="w-4 h-4 text-primary" />
             <span className="text-sm font-medium text-primary">Étape 5</span>
@@ -134,13 +117,9 @@ const PredictionSection = () => {
           <p className="section-subtitle max-w-2xl mx-auto">
             Utilisez le modèle entraîné pour prédire le niveau de risque de pollution de l'air
           </p>
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-        >
+        <div>
           <Card className="p-8 bg-card border-border/50 gradient-border">
             <div className="grid md:grid-cols-2 gap-8">
               {/* Formulaire */}
@@ -388,7 +367,7 @@ const PredictionSection = () => {
               </div>
             </div>
           </Card>
-        </motion.div>
+        </div>
       </div>
     </section>
   );

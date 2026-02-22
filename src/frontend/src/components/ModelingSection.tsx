@@ -1,5 +1,6 @@
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Brain, Target, Activity, Award, TrendingUp, CheckCircle } from "lucide-react";
+import { Brain, Target, Activity, Award, TrendingUp } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import {
   BarChart,
@@ -12,13 +13,39 @@ import {
   LineChart,
   Line,
 } from "recharts";
-import { modelResults, featureImportance, crossValidationScores } from "@/data/airQualityDataset";
+import { useToast } from "@/hooks/use-toast";
+
+type ModelMetrics = {
+  accuracy: number;
+  precision: number;
+  recall: number;
+  f1_score: number;
+  hyperparameters: Record<string, any>;
+  cv_scores: number[];
+  feature_importance: { feature: string; importance: number }[];
+};
+
+const API_URL = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
 
 const ModelingSection = () => {
-  const cvData = crossValidationScores.map((score, i) => ({
-    fold: `Fold ${i + 1}`,
-    score: score,
-  }));
+  const { toast } = useToast();
+  const [metrics, setMetrics] = useState<ModelMetrics | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const m = await fetch(`${API_URL}/model/metrics`).then((r) => r.json());
+        setMetrics(m);
+      } catch (e) {
+        toast({ title: "Modélisation", description: "Métriques indisponibles", variant: "destructive" });
+      }
+    })();
+  }, [toast]);
+
+  const cvData = useMemo(() => {
+    if (!metrics) return [];
+    return metrics.cv_scores.map((score, i) => ({ fold: `Fold ${i + 1}`, score }));
+  }, [metrics]);
 
   return (
     <section id="modeling" className="py-20 px-4 bg-muted/20">
@@ -39,7 +66,7 @@ const ModelingSection = () => {
           </p>
         </motion.div>
 
-        {/* Métriques principales */}
+        {metrics && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -48,7 +75,7 @@ const ModelingSection = () => {
           >
             <Card className="p-6 bg-card border-border/50 text-center gradient-border">
               <Target className="w-8 h-8 text-primary mx-auto mb-3" />
-              <p className="text-3xl font-bold text-foreground">{(modelResults.accuracy * 100).toFixed(0)}%</p>
+              <p className="text-3xl font-bold text-foreground">{(metrics.accuracy * 100).toFixed(0)}%</p>
               <p className="text-sm text-muted-foreground">Accuracy</p>
             </Card>
           </motion.div>
@@ -60,7 +87,7 @@ const ModelingSection = () => {
           >
             <Card className="p-6 bg-card border-border/50 text-center">
               <Activity className="w-8 h-8 text-success mx-auto mb-3" />
-              <p className="text-3xl font-bold text-foreground">{(modelResults.precision * 100).toFixed(0)}%</p>
+              <p className="text-3xl font-bold text-foreground">{(metrics.precision * 100).toFixed(0)}%</p>
               <p className="text-sm text-muted-foreground">Precision</p>
             </Card>
           </motion.div>
@@ -72,7 +99,7 @@ const ModelingSection = () => {
           >
             <Card className="p-6 bg-card border-border/50 text-center">
               <Award className="w-8 h-8 text-info mx-auto mb-3" />
-              <p className="text-3xl font-bold text-foreground">{(modelResults.recall * 100).toFixed(0)}%</p>
+              <p className="text-3xl font-bold text-foreground">{(metrics.recall * 100).toFixed(0)}%</p>
               <p className="text-sm text-muted-foreground">Recall</p>
             </Card>
           </motion.div>
@@ -84,14 +111,14 @@ const ModelingSection = () => {
           >
             <Card className="p-6 bg-card border-border/50 text-center">
               <TrendingUp className="w-8 h-8 text-warning mx-auto mb-3" />
-              <p className="text-3xl font-bold text-foreground">{(modelResults.f1_score * 100).toFixed(0)}%</p>
+              <p className="text-3xl font-bold text-foreground">{(metrics.f1_score * 100).toFixed(0)}%</p>
               <p className="text-sm text-muted-foreground">F1 Score</p>
             </Card>
           </motion.div>
         </div>
+        )}
 
         <div className="grid lg:grid-cols-2 gap-8">
-          {/* Feature Importance */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -101,7 +128,7 @@ const ModelingSection = () => {
               <h3 className="font-semibold text-foreground mb-4">Importance des Features</h3>
               <div className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={featureImportance} layout="vertical">
+                  <BarChart data={metrics?.feature_importance || []} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                     <XAxis type="number" tick={{ fill: '#9ca3af', fontSize: 12 }} />
                     <YAxis dataKey="feature" type="category" tick={{ fill: '#9ca3af', fontSize: 12 }} width={100} />
@@ -153,13 +180,17 @@ const ModelingSection = () => {
                 </ResponsiveContainer>
               </div>
               <p className="text-center text-sm text-muted-foreground mt-4">
-                Score moyen: {(crossValidationScores.reduce((a, b) => a + b, 0) / crossValidationScores.length * 100).toFixed(1)}%
+                {metrics
+                  ? `Score moyen: ${(
+                      (metrics.cv_scores.reduce((a, b) => a + b, 0) / metrics.cv_scores.length) *
+                      100
+                    ).toFixed(1)}%`
+                  : "Score moyen: -"}
               </p>
             </Card>
           </motion.div>
         </div>
 
-        {/* Hyperparamètres */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -169,12 +200,13 @@ const ModelingSection = () => {
           <Card className="p-6 bg-card border-border/50">
             <h3 className="font-semibold text-foreground mb-4">Hyperparamètres du Modèle</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {Object.entries(modelResults.hyperparameters).map(([key, value]) => (
-                <div key={key} className="p-4 rounded-lg bg-muted/30 text-center">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide">{key.replace('_', ' ')}</p>
-                  <p className="text-xl font-mono font-bold text-primary mt-1">{value}</p>
-                </div>
-              ))}
+              {metrics &&
+                Object.entries(metrics.hyperparameters).map(([key, value]) => (
+                  <div key={key} className="p-4 rounded-lg bg-muted/30 text-center">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">{key.replace("_", " ")}</p>
+                    <p className="text-xl font-mono font-bold text-primary mt-1">{value as any}</p>
+                  </div>
+                ))}
             </div>
           </Card>
         </motion.div>

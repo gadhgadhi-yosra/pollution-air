@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import { BarChart3, TrendingUp, Database, PieChart, Wind, AlertTriangle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import {
@@ -9,30 +8,75 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  ScatterChart,
-  Scatter,
+  LineChart,
+  Line,
   Cell,
 } from "recharts";
-import {
-  datasetStats,
-  riskDistribution,
-  avgPollutionByCity,
-  pm25VsRisk,
-  featureCorrelations,
-} from "@/data/airQualityDataset";
+import { useEffect, useState } from "react";
+import { useToast } from "@/hooks/use-toast";
+
+type Summary = {
+  shape: [number, number];
+  columns: string[];
+  describe: Record<string, Record<string, number>>;
+  nulls: Record<string, number>;
+};
+
+type TS = { datetime: string[]; value: number[] };
+
+const API_URL = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
 
 const COLORS = ["#22c55e", "#3b82f6", "#eab308", "#f97316", "#ef4444", "#dc2626"];
 
 const EDASection = () => {
+  const { toast } = useToast();
+  const [summary, setSummary] = useState<Summary | null>(null);
+  const [timeseries, setTimeseries] = useState<TS | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const s = await fetch(`${API_URL}/eda/summary`).then((r) => r.json());
+        const ts = await fetch(`${API_URL}/eda/timeseries?limit=300`).then((r) => r.json());
+        setSummary(s);
+        setTimeseries(ts);
+      } catch (e) {
+        toast({ title: "EDA indisponible", description: "Impossible de charger les stats", variant: "destructive" });
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [toast]);
+
+  // distribution approximative en 6 bins sur la série "value"
+  const riskDistribution =
+    timeseries?.value?.length
+      ? (() => {
+          const bins = [0, 1, 2, 3, 4, 5].map((b) => ({ range: `${b}`, count: 0 }));
+          timeseries.value.forEach((v) => {
+            const level = Math.max(0, Math.min(5, Math.round(v / 20)));
+            bins[level].count += 1;
+          });
+          return bins;
+        })()
+      : [];
+
+  const datasetStats = summary
+    ? {
+        totalRecords: summary.shape[0],
+        features: summary.shape[1],
+        pm25Range: { max: summary.describe?.pm25?.max ?? 0 },
+        missingValues: Object.values(summary.nulls || {}).reduce((a, b) => a + b, 0),
+      }
+    : null;
+
+  if (loading) return null;
+  if (!summary || !timeseries) return null;
   return (
     <section id="eda" className="py-20 px-4 bg-muted/20">
       <div className="container mx-auto max-w-6xl">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center mb-12"
-        >
+        <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6">
             <BarChart3 className="w-4 h-4 text-primary" />
             <span className="text-sm font-medium text-primary">Étape 2</span>
@@ -41,15 +85,9 @@ const EDASection = () => {
           <p className="section-subtitle max-w-2xl mx-auto">
             Exploration et visualisation des données de pollution atmosphérique
           </p>
-        </motion.div>
+        </div>
 
-        {/* Stats du dataset */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"
-        >
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <Card className="p-4 bg-card border-border/50 text-center">
             <Database className="w-6 h-6 text-primary mx-auto mb-2" />
             <p className="text-2xl font-bold text-foreground">{datasetStats.totalRecords}</p>
@@ -70,17 +108,12 @@ const EDASection = () => {
             <p className="text-2xl font-bold text-foreground">{datasetStats.missingValues}</p>
             <p className="text-xs text-muted-foreground">Valeurs manquantes</p>
           </Card>
-        </motion.div>
+        </div>
 
         <div className="grid lg:grid-cols-2 gap-8">
-          {/* Distribution des niveaux de risque */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-          >
+          <div>
             <Card className="p-6 bg-card border-border/50">
-              <h3 className="font-semibold text-foreground mb-4">Distribution des Niveaux de Risque</h3>
+              <h3 className="font-semibold text-foreground mb-4">Distribution des Niveaux (bins)</h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={riskDistribution}>
@@ -103,104 +136,31 @@ const EDASection = () => {
                 </ResponsiveContainer>
               </div>
             </Card>
-          </motion.div>
+          </div>
 
-          {/* PM2.5 moyen par ville */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-          >
+          <div>
             <Card className="p-6 bg-card border-border/50">
-              <h3 className="font-semibold text-foreground mb-4">PM2.5 Moyen par Ville</h3>
+              <h3 className="font-semibold text-foreground mb-4">Série temporelle (value)</h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={avgPollutionByCity} layout="vertical">
+                  <LineChart data={timeseries.datetime.map((d, i) => ({ datetime: d, value: timeseries.value[i] }))}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                    <XAxis type="number" tick={{ fill: '#9ca3af', fontSize: 12 }} unit=" µg/m³" />
-                    <YAxis dataKey="ville" type="category" tick={{ fill: '#9ca3af', fontSize: 12 }} width={80} />
+                    <XAxis dataKey="datetime" tick={{ fill: '#9ca3af', fontSize: 10 }} hide />
+                    <YAxis tick={{ fill: '#9ca3af', fontSize: 12 }} />
                     <Tooltip
-                      formatter={(value: number) => [`${value.toFixed(1)} µg/m³`, 'PM2.5 moyen']}
                       contentStyle={{
                         backgroundColor: '#1f2937',
                         border: '1px solid #374151',
                         borderRadius: '8px',
                       }}
                     />
-                    <Bar dataKey="avgPM25" radius={[0, 4, 4, 0]}>
-                      {avgPollutionByCity.map((entry, index) => (
-                        <Cell 
-                          key={`cell-${index}`} 
-                          fill={entry.avgPM25 > 25 ? "#ef4444" : entry.avgPM25 > 15 ? "#eab308" : "#22c55e"} 
-                        />
-                      ))}
-                    </Bar>
-                  </BarChart>
+                    <Line type="monotone" dataKey="value" stroke="#06b6d4" strokeWidth={2} dot={false} />
+                  </LineChart>
                 </ResponsiveContainer>
               </div>
             </Card>
-          </motion.div>
+          </div>
 
-          {/* PM2.5 vs Niveau de risque */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-          >
-            <Card className="p-6 bg-card border-border/50">
-              <h3 className="font-semibold text-foreground mb-4">Corrélation PM2.5 / Risque</h3>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ScatterChart>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                    <XAxis dataKey="pm25" name="PM2.5" unit=" µg/m³" tick={{ fill: '#9ca3af', fontSize: 12 }} />
-                    <YAxis dataKey="risk_level" name="Risque" tick={{ fill: '#9ca3af', fontSize: 12 }} domain={[0, 5]} />
-                    <Tooltip
-                      cursor={{ strokeDasharray: '3 3' }}
-                      contentStyle={{
-                        backgroundColor: '#1f2937',
-                        border: '1px solid #374151',
-                        borderRadius: '8px',
-                      }}
-                    />
-                    <Scatter name="Mesures" data={pm25VsRisk} fill="#06b6d4" />
-                  </ScatterChart>
-                </ResponsiveContainer>
-              </div>
-            </Card>
-          </motion.div>
-
-          {/* Corrélations */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-          >
-            <Card className="p-6 bg-card border-border/50">
-              <h3 className="font-semibold text-foreground mb-4">Corrélation avec le Risque</h3>
-              <div className="space-y-4">
-                {featureCorrelations.map((feat, index) => (
-                  <div key={feat.feature}>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-muted-foreground">{feat.feature}</span>
-                      <span className={`font-mono ${feat.correlation < 0 ? 'text-success' : 'text-primary'}`}>
-                        {feat.correlation > 0 ? '+' : ''}{feat.correlation.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        whileInView={{ width: `${Math.abs(feat.correlation) * 100}%` }}
-                        transition={{ duration: 0.8, delay: index * 0.1 }}
-                        viewport={{ once: true }}
-                        className={`h-full rounded-full ${feat.correlation < 0 ? 'bg-success' : 'bg-primary'}`}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          </motion.div>
         </div>
       </div>
     </section>

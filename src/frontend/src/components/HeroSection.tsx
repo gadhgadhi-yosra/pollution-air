@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import { ArrowDown, Database, Brain, Sparkles, Wind } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -17,53 +16,24 @@ const HeroSection = () => {
       <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-info/10 rounded-full blur-3xl animate-pulse-slow" style={{ animationDelay: "1s" }} />
 
       <div className="container mx-auto px-4 py-20 relative z-10">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="text-center max-w-4xl mx-auto"
-        >
-          {/* Badge */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-8"
-          >
+        <div className="text-center max-w-4xl mx-auto">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-8">
             <Sparkles className="w-4 h-4 text-primary" />
             <span className="text-sm font-medium text-primary">Python for Data Science 2</span>
-          </motion.div>
+          </div>
 
-          {/* Titre principal */}
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6"
-          >
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6">
             <span className="text-foreground">Prédiction du</span>
             <br />
             <span className="gradient-text text-glow">Risque de Pollution</span>
-          </motion.h1>
+          </h1>
 
-          {/* Sous-titre */}
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10"
-          >
+          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
             Projet complet de Machine Learning : Web Scraping, EDA, Preprocessing,
             Modélisation XGBoost et déploiement avec React & FastAPI
-          </motion.p>
+          </p>
 
-          {/* Boutons CTA */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="flex flex-wrap items-center justify-center gap-4 mb-16"
-          >
+          <div className="flex flex-wrap items-center justify-center gap-4 mb-16">
             <Button
               size="lg"
               onClick={() => scrollToSection("prediction")}
@@ -81,15 +51,9 @@ const HeroSection = () => {
               <Database className="w-5 h-5 mr-2" />
               Voir le Dataset
             </Button>
-          </motion.div>
+          </div>
 
-          {/* Stats rapides */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className="grid grid-cols-3 gap-8 max-w-xl mx-auto"
-          >
+          <div className="grid grid-cols-3 gap-8 max-w-xl mx-auto">
             {[
               { label: "Mesures", value: "2,450" },
               { label: "Accuracy", value: "89%" },
@@ -100,25 +64,17 @@ const HeroSection = () => {
                 <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
               </div>
             ))}
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
 
-        {/* Flèche scroll */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1 }}
-          className="absolute bottom-8 left-1/2 -translate-x-1/2"
-        >
-          <motion.button
-            animate={{ y: [0, 10, 0] }}
-            transition={{ duration: 2, repeat: Infinity }}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2">
+          <button
             onClick={() => scrollToSection("pipeline")}
             className="p-2 rounded-full border border-border/50 text-muted-foreground hover:text-primary hover:border-primary transition-colors"
           >
             <ArrowDown className="w-5 h-5" />
-          </motion.button>
-        </motion.div>
+          </button>
+        </div>
       </div>
     </section>
   );
